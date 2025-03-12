@@ -1,3 +1,4 @@
+// ... imports remain the same
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import crypto from "crypto-js";
@@ -7,7 +8,10 @@ import { QRCodeSVG } from "qrcode.react";
 import "./css/ProjectVote.css";
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
-const BASE_URL = "https://yukthipoll.netlify.app";
+const BASE_URL =
+  import.meta.env.VITE_ENV === "production"
+    ? "https://yukthipoll.netlify.app"
+    : " http://192.168.1.34:5173";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPA_URL,
@@ -22,27 +26,20 @@ const ProjectVote = () => {
   const [fingerprint, setFingerprint] = useState("");
   const [ip, setIp] = useState("");
   const [currentKey, setCurrentKey] = useState("");
+  const [currentTimestamp, setCurrentTimestamp] = useState(0); // Keep this
   const [isAllowed, setIsAllowed] = useState(null);
   const [message, setMessage] = useState("");
   const [loadingProjects, setLoadingProjects] = useState(true);
 
-  // Fetch projects from Supabase
   useEffect(() => {
     const fetchProjects = async () => {
       try {
         const { data, error } = await supabase
           .from("teams")
           .select("id, project_title");
-
-        if (error) {
-          throw error;
-        }
-
+        if (error) throw error;
         setProjects(
-          data.map((team) => ({
-            id: team.id,
-            name: team.project_title,
-          }))
+          data.map((team) => ({ id: team.id, name: team.project_title }))
         );
       } catch (err) {
         console.error("Error fetching projects:", err);
@@ -51,22 +48,21 @@ const ProjectVote = () => {
         setLoadingProjects(false);
       }
     };
-
     fetchProjects();
   }, []);
 
   const project = projects.find((p) => p.id === projectId);
 
-  // Function to generate new key
-  const generateKey = () => {
+  // Generate key and timestamp together
+  const generateKeyAndTimestamp = () => {
     const timestamp = Math.floor(Date.now() / 10000);
     const newKey = crypto
       .HmacSHA256(timestamp.toString(), SECRET_KEY)
       .toString();
+    setCurrentTimestamp(timestamp);
     setCurrentKey(newKey);
   };
 
-  // Fetch fingerprint and IP on mount
   useEffect(() => {
     FingerprintJS.load()
       .then((fp) => fp.get())
@@ -82,14 +78,12 @@ const ProjectVote = () => {
       .catch(() => setIp("unknown"));
   }, []);
 
-  // Generate initial key and set up refresh interval
   useEffect(() => {
-    generateKey();
-    const keyInterval = setInterval(generateKey, 10000);
+    generateKeyAndTimestamp();
+    const keyInterval = setInterval(generateKeyAndTimestamp, 10000);
     return () => clearInterval(keyInterval);
   }, []);
 
-  // Check and lock fingerprint in project_links
   useEffect(() => {
     if (!fingerprint || !projectId) return;
 
@@ -112,7 +106,9 @@ const ProjectVote = () => {
             setIsAllowed(true);
           } else {
             setIsAllowed(false);
-            setMessage("❌ This project is already logged in to another device(only 1 device login per project is allowed)");
+            setMessage(
+              "❌ This project is already logged in to another device (only 1 device login per project is allowed)"
+            );
           }
         } else {
           const { error: insertError } = await supabase
@@ -136,18 +132,16 @@ const ProjectVote = () => {
     checkAndLockFingerprint();
   }, [fingerprint, projectId]);
 
-  // Generate encrypted vote link
   const generateVoteLink = () => {
     if (!project || !fingerprint || !ip || !currentKey || !isAllowed) return "";
 
-    const timestamp = Math.floor(Date.now() / 10000);
     const qrSecret = crypto
-      .HmacSHA256(timestamp.toString(), SECRET_KEY)
+      .HmacSHA256(currentTimestamp.toString(), SECRET_KEY)
       .toString();
 
     const payload = JSON.stringify({
       project_id: projectId,
-      timestamp,
+      timestamp: currentTimestamp, // Use the stored timestamp
       qrSecret,
       fingerprint,
       ip,
@@ -172,8 +166,7 @@ const ProjectVote = () => {
 
   return (
     <div className="project-vote-container">
-      <h2>VOTERS : You can only vote for 1 PROJECT</h2>
-
+      <h2>VOTERS: You can only vote for 1 PROJECT</h2>
       <h1>{project.name}</h1>
       {fingerprint && ip && currentKey && isAllowed !== null ? (
         isAllowed ? (
