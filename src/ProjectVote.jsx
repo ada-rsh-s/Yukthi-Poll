@@ -8,10 +8,8 @@ import { QRCodeSVG } from "qrcode.react";
 import "./css/ProjectVote.css";
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
-const BASE_URL =
-  import.meta.env.VITE_ENV === "production"
-    ? "https://yukthipoll.netlify.app"
-    : " http://192.168.1.34:5173";
+const BASE_URL = "https://yukthipoll.netlify.app"
+    
 
 const supabase = createClient(
   import.meta.env.VITE_SUPA_URL,
