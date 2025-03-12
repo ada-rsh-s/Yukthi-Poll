@@ -167,7 +167,9 @@ const ProjectVote = () => {
 
   return (
     <div className="project-vote-container">
-      <h2>VOTERS: You can only vote for 1 PROJECT</h2>
+      <h2 style={{ color: "red"}}>
+        VOTERS: You can only vote for 1 PROJECT
+      </h2>
       <h1>{project.name}</h1>
       {fingerprint && ip && currentKey && isAllowed !== null ? (
         isAllowed ? (
@@ -190,7 +192,9 @@ const ProjectVote = () => {
       ) : (
         <p className="loading-text">Loading...</p>
       )}
-      <p>THIS PROJECT LINK CAN BE OPENED ONLY UPTO MAX 3 DEVICES</p>
+      <p style={{ color: "red", fontWeight: "600" }}>
+        THIS PROJECT LINK CAN BE OPENED ONLY UPTO MAX 3 DEVICES
+      </p>
     </div>
   );
 };
