@@ -8,8 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import "./css/ProjectVote.css";
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
-const BASE_URL = "https://yukthipoll.netlify.app"
-    
+const BASE_URL = "https://yukthipoll.netlify.app";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPA_URL,
@@ -24,7 +23,7 @@ const ProjectVote = () => {
   const [fingerprint, setFingerprint] = useState("");
   const [ip, setIp] = useState("");
   const [currentKey, setCurrentKey] = useState("");
-  const [currentTimestamp, setCurrentTimestamp] = useState(0); // Keep this
+  const [currentTimestamp, setCurrentTimestamp] = useState(0);
   const [isAllowed, setIsAllowed] = useState(null);
   const [message, setMessage] = useState("");
   const [loadingProjects, setLoadingProjects] = useState(true);
@@ -51,7 +50,6 @@ const ProjectVote = () => {
 
   const project = projects.find((p) => p.id === projectId);
 
-  // Generate key and timestamp together
   const generateKeyAndTimestamp = () => {
     const timestamp = Math.floor(Date.now() / 10000);
     const newKey = crypto
@@ -87,28 +85,29 @@ const ProjectVote = () => {
 
     const checkAndLockFingerprint = async () => {
       try {
-        const { data: existingLink, error: fetchError } = await supabase
+        // Fetch all fingerprints for this project
+        const { data: existingLinks, error: fetchError } = await supabase
           .from("project_links")
           .select("fingerprint")
-          .eq("project_id", projectId)
-          .single();
+          .eq("project_id", projectId);
 
-        if (fetchError && fetchError.code !== "PGRST116") {
+        if (fetchError) {
           setMessage("❌ Error checking project lock: " + fetchError.message);
           setIsAllowed(false);
           return;
         }
 
-        if (existingLink) {
-          if (existingLink.fingerprint === fingerprint) {
-            setIsAllowed(true);
-          } else {
-            setIsAllowed(false);
-            setMessage(
-              "❌ This project is already logged in to another device (only 1 device login per project is allowed)"
-            );
-          }
-        } else {
+        // Count unique fingerprints
+        const uniqueFingerprints = existingLinks
+          ? [...new Set(existingLinks.map((link) => link.fingerprint))]
+          : [];
+        const fingerprintCount = uniqueFingerprints.length;
+
+        if (uniqueFingerprints.includes(fingerprint)) {
+          // If this device is already linked, allow it
+          setIsAllowed(true);
+        } else if (fingerprintCount < 3) {
+          // If less than 3 devices, add this one
           const { error: insertError } = await supabase
             .from("project_links")
             .insert([{ project_id: projectId, fingerprint }]);
@@ -119,6 +118,10 @@ const ProjectVote = () => {
           } else {
             setIsAllowed(true);
           }
+        } else {
+          // If 3 devices are already linked, deny access
+          setIsAllowed(false);
+          setMessage("❌ This project link has reached its limit of 3 devices");
         }
       } catch (err) {
         console.error(err);
@@ -139,7 +142,7 @@ const ProjectVote = () => {
 
     const payload = JSON.stringify({
       project_id: projectId,
-      timestamp: currentTimestamp, // Use the stored timestamp
+      timestamp: currentTimestamp,
       qrSecret,
       fingerprint,
       ip,
@@ -187,6 +190,7 @@ const ProjectVote = () => {
       ) : (
         <p className="loading-text">Loading...</p>
       )}
+      <p>THIS PROJECT LINK CAN BE OPENED ONLY UPTO MAX 3 DEVICES</p>
     </div>
   );
 };
