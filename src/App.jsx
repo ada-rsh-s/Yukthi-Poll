@@ -4,7 +4,8 @@ import Voted from "./Voted";
 
 function App() {
   return (
-      <Routes>
+    <Routes>
+        <Route path="/" element={<center>YUKTHI PROJECT EXPO</center>} />
         <Route path="/:id" element={<ProjectVote />} />
         <Route path="/vote" element={<Voted />} />
 

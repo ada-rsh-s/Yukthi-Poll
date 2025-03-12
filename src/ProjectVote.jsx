@@ -7,7 +7,7 @@ import { QRCodeSVG } from "qrcode.react";
 import "./css/ProjectVote.css";
 
 const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
-const BASE_URL = "https://clever-buttercream-19f4a3.netlify.app";
+const BASE_URL = "https://yukthipoll.netlify.app";
 
 const supabase = createClient(
   import.meta.env.VITE_SUPA_URL,
